@@ -20,7 +20,8 @@ composer.lock
 yarn.lock
 docker-compose.yml
 .DS_Store
-/docker
+.docker/.data/mysql/*
+!.docker/.data/mysql/.gitkeep
 storage/laravels.conf
 storage/laravels.pid
 storage/update_pending
@@ -30,3 +31,6 @@ frontend
 docker-compose.yaml
 bun.lockb
 .scribe
+.docker/.data/
+*.ibd
+ibdata*
