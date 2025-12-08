@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <title>Xboard 面板对接 XrayR 教程</title>
+  <style>
+    :root {
+      color-scheme: light dark;
+    }
+    body {
+      font-family: "Segoe UI", "PingFang SC", Helvetica, Arial, sans-serif;
+      margin: 40px auto;
+      max-width: 920px;
+      line-height: 1.7;
+      color: #1f2933;
+      padding: 0 20px 60px;
+      background: #f5f7fb;
+    }
+    h1, h2, h3 {
+      color: #1d4ed8;
+    }
+    h1 {
+      margin-bottom: 0.6em;
+      font-size: 2rem;
+    }
+    h2 {
+      margin-top: 2.2em;
+      border-left: 4px solid #1d4ed8;
+      padding-left: 12px;
+      font-size: 1.4rem;
+    }
+    h3 {
+      margin-top: 1.6em;
+      font-size: 1.15rem;
+    }
+    p {
+      margin: 0.6em 0;
+    }
+    ul {
+      margin-left: 1.5em;
+    }
+    pre {
+      background: #0f172a;
+      color: #e2e8f0;
+      padding: 14px 18px;
+      border-radius: 8px;
+      overflow-x: auto;
+      font-size: 0.92rem;
+    }
+    code {
+      font-family: "JetBrains Mono", Consolas, monospace;
+    }
+    .tip {
+      background: #eef2ff;
+      border-left: 4px solid #6366f1;
+      padding: 12px 16px;
+      border-radius: 6px;
+      margin: 1.4em 0;
+      color: #4338ca;
+    }
+    .steps {
+      counter-reset: step;
+      list-style: none;
+      padding-left: 0;
+    }
+    .steps li {
+      counter-increment: step;
+      margin: 1em 0;
+      padding-left: 2.5em;
+      position: relative;
+    }
+    .steps li::before {
+      content: counter(step);
+      position: absolute;
+      left: 0;
+      top: 0.15em;
+      width: 1.6em;
+      height: 1.6em;
+      border-radius: 50%;
+      background: #1d4ed8;
+      color: #fff;
+      text-align: center;
+      line-height: 1.6em;
+      font-weight: 600;
+    }
+    footer {
+      margin-top: 3em;
+      font-size: 0.9rem;
+      color: #64748b;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <h1>Xboard 面板对接 XrayR 指南</h1>
+  <p>本教程适用于 “本地部署的 Xboard 面板 + 远程节点运行 XrayR” 的场景，帮助你快速完成节点对接。</p>
+  <div class="tip">
+    如果面板还未上线（仅本地访问），暂时可以先在节点配置中使用内网/临时域名，等部署到公网后再更新为正式域名。对接参数只要与最终上线地址一致即可。
+  </div>
+
+  <h2>1. 准备工作</h2>
+  <ul>
+    <li>确认 Xboard 后台可访问，管理员账号可登录。</li>
+    <li>远程服务器（Debian/Ubuntu/CentOS 均可），开放必要端口（80/443/节点端口），系统时间同步。</li>
+    <li>拥有 SSH / sudo 权限；若使用 HTTPS，域名需解析到节点服务器。</li>
+  </ul>
+
+  <h2>2. 在 Xboard 创建节点</h2>
+  <ol class="steps">
+    <li>登录后台 → “服务/节点” → “节点列表”，点击 “新增节点”。</li>
+    <li>选择协议类型（Vmess / Vless / Trojan / Shadowsocks / Hysteria 等），填写名称、分组、倍率、限速等。</li>
+    <li>按照准备好的节点参数填写端口、UUID、加密方式、传输配置等。</li>
+    <li>保存后记下节点的 <strong>Node ID</strong>，稍后在 XrayR 中会用到。</li>
+  </ol>
+  <div class="tip">
+    提示：所有协议的具体字段说明可在创建页面查看，或参考官方文档。
+  </div>
+
+  <h2>3. 获取面板对接信息</h2>
+  <ul>
+    <li>后台 → “系统设置” → “后端” 中找到 <code>panelUrl</code>（API 地址）和 <code>panelKey</code>（面板密钥）。若菜单中暂未展示，可在 <code>.env</code> 中设置 <code>PANEL_URL</code> / <code>PANEL_KEY</code> 并清缓存后刷新。</li>
+    <li>面板 URL 建议使用可从外部访问的域名。若当前仍在本地，可先用内网地址占位，待部署到公网后再更新。</li>
+  </ul>
+
+  <h2>4. 在节点服务器安装 XrayR</h2>
+  <pre><code>curl -Ls https://raw.githubusercontent.com/XrayR-project/XrayR-release/master/install.sh | sudo bash
+# 安装完成后，配置文件位于 /etc/XrayR/config.yml
+</code></pre>
+  <p>你也可以使用二进制或自编译方式，确保服务可通过 systemd 管理。</p>
+
+  <h2>5. 编辑 /etc/XrayR/config.yml</h2>
+  <p>以 Vmess 节点为例：</p>
+  <pre><code>Nodes:
+  - PanelType: Xboard
+    ApiConfig:
+      ApiHost: "https://your-domain.com"   # Xboard 面板域名
+      ApiKey: "your-panel-key"             # 后台中获取
+      NodeID: 1                            # 第 2 步记下的 Node ID
+      NodeType: V2ray                      # V2ray/Vless/Trojan/SS/Hysteria 等
+      Timeout: 30
+    ControllerConfig:
+      ListenIP: 0.0.0.0
+      UpdatePeriodic: 60                   # 轮询面板的间隔
+      EnableDNS: true
+      CertConfig:
+        CertMode: http                     # http/dns/file
+        CertDomain: node.your-domain.com
+</code></pre>
+  <p>若需要多节点/多协议，可在 <code>Nodes</code> 数组中添加多个配置，分别指定不同的 NodeID 与 NodeType。</p>
+
+  <h2>6. 启动并验证</h2>
+  <pre><code>sudo systemctl enable XrayR
+sudo systemctl start XrayR
+sudo journalctl -fu XrayR
+</code></pre>
+  <p>日志中出现 “Panel connected / Fetch node config ok” 等字样即表示对接成功。</p>
+
+  <h2>7. 面板侧确认</h2>
+  <ul>
+    <li>后台节点列表查看在线状态、最后心跳时间等。</li>
+    <li>用户生成订阅链接，在客户端导入并测试连通性。</li>
+  </ul>
+
+  <h2>8. 常见问题</h2>
+  <ul>
+    <li><strong>Connection refused：</strong> 检查节点能否访问面板域名（网络/防火墙/证书）。</li>
+    <li><strong>NodeID not found：</strong> 确认 NodeID 是否填写正确，面板是否存在该节点。</li>
+    <li><strong>证书申请失败：</strong> 使用 http 模式时需开放 80 端口并完成域名解析；或切换到 dns/file 模式。</li>
+    <li><strong>流量统计异常：</strong> 确保 XrayR 版本与面板接口兼容，必要时更新 XrayR 或面板。</li>
+  </ul>
+
+  <footer>文档生成时间：<?php echo date('Y-m-d H:i'); ?></footer>
+</body>
+</html>
+
