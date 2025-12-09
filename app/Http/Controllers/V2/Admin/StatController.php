@@ -112,6 +112,29 @@ class StatController extends Controller
      */
     public function getOrder(Request $request)
     {
+        // 检查用户是否在限制列表中
+        $restrictedIds = array_filter(array_map('intval', explode(',', (string) env('CUSTOMER_IDS', ''))));
+        if (!empty($restrictedIds) && in_array((int) $request->user()->id, $restrictedIds, true)) {
+            return [
+                'code' => 0,
+                'message' => 'success',
+                'data' => [
+                    'list' => [],
+                    'summary' => [
+                        'paid_total' => 0,
+                        'paid_count' => 0,
+                        'commission_total' => 0,
+                        'commission_count' => 0,
+                        'start_date' => $request->input('start_date', date('Y-m-d')),
+                        'end_date' => $request->input('end_date', date('Y-m-d')),
+                        'avg_paid_amount' => 0,
+                        'avg_commission_amount' => 0,
+                        'commission_rate' => 0
+                    ]
+                ]
+            ];
+        }
+
         $request->validate([
             'start_date' => 'nullable|date_format:Y-m-d',
             'end_date' => 'nullable|date_format:Y-m-d',
@@ -255,8 +278,38 @@ class StatController extends Controller
     /**
      * Get comprehensive statistics data including income, users, and growth rates
      */
-    public function getStats()
+    public function getStats(Request $request)
     {
+        // 检查用户是否在限制列表中
+        $restrictedIds = array_filter(array_map('intval', explode(',', (string) env('CUSTOMER_IDS', ''))));
+        if (!empty($restrictedIds) && in_array((int) $request->user()->id, $restrictedIds, true)) {
+            return [
+                'data' => [
+                    'todayIncome' => 0,
+                    'dayIncomeGrowth' => 0,
+                    'currentMonthIncome' => 0,
+                    'lastMonthIncome' => 0,
+                    'monthIncomeGrowth' => 0,
+                    'lastMonthIncomeGrowth' => 0,
+                    'currentMonthCommissionPayout' => 0,
+                    'lastMonthCommissionPayout' => 0,
+                    'commissionGrowth' => 0,
+                    'commissionPendingTotal' => 0,
+                    'currentMonthNewUsers' => 0,
+                    'totalUsers' => 0,
+                    'activeUsers' => 0,
+                    'userGrowth' => 0,
+                    'onlineUsers' => 0,
+                    'onlineDevices' => 0,
+                    'ticketPendingTotal' => 0,
+                    'onlineNodes' => 0,
+                    'todayTraffic' => ['upload' => 0, 'download' => 0, 'total' => 0],
+                    'monthTraffic' => ['upload' => 0, 'download' => 0, 'total' => 0],
+                    'totalTraffic' => ['upload' => 0, 'download' => 0, 'total' => 0]
+                ]
+            ];
+        }
+
         $currentMonthStart = strtotime(date('Y-m-01'));
         $lastMonthStart = strtotime('-1 month', $currentMonthStart);
         $twoMonthsAgoStart = strtotime('-2 month', $currentMonthStart);
@@ -429,6 +482,15 @@ class StatController extends Controller
      */
     public function getTrafficRank(Request $request)
     {
+        // 检查用户是否在限制列表中
+        $restrictedIds = array_filter(array_map('intval', explode(',', (string) env('CUSTOMER_IDS', ''))));
+        if (!empty($restrictedIds) && in_array((int) $request->user()->id, $restrictedIds, true)) {
+            return [
+                'timestamp' => date('c'),
+                'data' => []
+            ];
+        }
+
         $request->validate([
             'type' => 'required|in:node,user',
             'start_time' => 'nullable|integer|min:1000000000|max:9999999999',

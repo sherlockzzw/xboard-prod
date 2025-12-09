@@ -202,6 +202,17 @@ class UserController extends Controller
     {
         $params = $request->validated();
 
+        // 检查配置的用户是否尝试修改 is_admin 字段
+        $restrictedIds = array_filter(array_map('intval', explode(',', (string) env('CUSTOMER_IDS', ''))));
+        if (!empty($restrictedIds) && in_array((int) $request->user()->id, $restrictedIds, true)) {
+            // 如果请求中包含 is_admin 字段（无论是 true 还是 false），都不允许修改
+            if (isset($params['is_admin'])) {
+                // 返回权限不足的错误，使用200状态码避免前端清除token
+                $response = $this->fail([403001, '无权限修改管理员状态']);
+                return response()->json($response->getData(true), 200);
+            }
+        }
+
         $user = User::find($request->input('id'));
         if (!$user) {
             return $this->fail([400202, '用户不存在']);
