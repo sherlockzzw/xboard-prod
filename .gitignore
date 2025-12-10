@@ -34,3 +34,4 @@ bun.lockb
 .docker/.data/
 *.ibd
 ibdata*
+._*
