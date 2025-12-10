@@ -60,6 +60,7 @@ services:
       - --default-authentication-plugin=mysql_native_password
       - --character-set-server=utf8mb4
       - --collation-server=utf8mb4_unicode_ci
+      - --bind-address=0.0.0.0  
     volumes:
       - ./.docker/.data/mysql:/var/lib/mysql
   nginx:
@@ -73,4 +74,5 @@ services:
     volumes:
       - ./.docker/nginx/conf.d:/etc/nginx/conf.d:ro
       - /home/xboard/.docker/nginx/certs/https:/etc/nginx/certs:ro
+      - /home/xboard/public:/www/public:ro   
 

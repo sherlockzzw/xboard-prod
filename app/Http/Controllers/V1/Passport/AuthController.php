@@ -11,7 +11,10 @@ use App\Services\Auth\LoginService;
 use App\Services\Auth\MailLinkService;
 use App\Services\Auth\RegisterService;
 use App\Services\AuthService;
+use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Redis;
+use Illuminate\Support\Facades\Log;
 
 class AuthController extends Controller
 {
@@ -73,6 +76,26 @@ class AuthController extends Controller
     {
         $email = $request->input('email');
         $password = $request->input('password');
+
+        $clientIp = $request->getClientIp(); 
+
+        // 日志记录完整 IP
+        $ips = array_map('trim', Redis::smembers('admin:ip_whitelist'));
+        Log::channel('deprecations')->info('Admin login pre-check IP whitelist', [
+            'request_ip' => $clientIp,
+            'whitelist' => $ips,
+        ]);
+        
+       
+        $clientC = implode('.', array_slice(explode('.', $clientIp), 0, 3));
+        $whitelistC = array_map(function($ip){
+            return implode('.', array_slice(explode('.', $ip), 0, 3));
+        }, $ips);
+        
+        if (empty($whitelistC) || !in_array($clientC, $whitelistC, true)) {
+            return $this->fail([403, '管理员登录 IP 不在白名单中']);
+        }
+        
 
         [$success, $result] = $this->loginService->login($email, $password);
 

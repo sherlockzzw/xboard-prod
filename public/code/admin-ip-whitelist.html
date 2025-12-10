@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <title>管理员登录 IP 白名单</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    body { font-family: Arial, sans-serif; max-width: 720px; margin: 40px auto; padding: 0 16px; color: #1f2933; }
+    h1 { font-size: 22px; margin-bottom: 12px; }
+    label { display: block; margin: 12px 0 6px; font-weight: bold; }
+    textarea { width: 100%; box-sizing: border-box; padding: 8px; border: 1px solid #cfd7df; border-radius: 6px; min-height: 200px; font-family: monospace; }
+    button { padding: 10px 16px; margin-right: 8px; border: none; border-radius: 6px; cursor: pointer; background: #2563eb; color: #fff; }
+    button.secondary { background: #6b7280; }
+    .muted { color: #65748b; font-size: 13px; }
+    .log { margin-top: 16px; padding: 12px; border: 1px solid #e5e7eb; border-radius: 6px; background: #f9fafb; white-space: pre-wrap; font-size: 13px; }
+  </style>
+</head>
+<body>
+  <h1>管理员登录 IP 白名单</h1>
+  <label for="ips">IP 白名单（每行一个 IP）</label>
+  <textarea id="ips" placeholder="例如：&#10;127.0.0.1&#10;1.2.3.4"></textarea>
+
+  <div style="margin-top: 12px;">
+    <button id="btnFetch">读取当前配置</button>
+    <button id="btnSave">保存白名单</button>
+    <button class="secondary" id="btnClear">清空输入</button>
+  </div>
+
+  <div class="log" id="log">等待操作...</div>
+
+  <script>
+    const logBox = document.getElementById('log');
+    const ipsInput = document.getElementById('ips');
+    const API_BASE = 'https://webbaiyangv.baiyangjiasu.com/api/v2/admin/security';
+
+    function log(message) {
+      const now = new Date().toLocaleTimeString();
+      logBox.textContent = `[${now}] ${message}`;
+    }
+
+    async function fetchWhitelist() {
+      const url = API_BASE + '/ip-whitelist';
+      log(`请求: GET ${url}`);
+      try {
+        const res = await fetch(url);
+        const data = await res.json();
+        if (data && data.data && Array.isArray(data.data)) {
+          ipsInput.value = data.data.join('\n');
+          log('已读取白名单');
+        } else {
+          log(`读取失败: ${JSON.stringify(data)}`);
+        }
+      } catch (e) {
+        log(`请求出错: ${e.message}`);
+      }
+    }
+
+    async function saveWhitelist() {
+      const url = API_BASE + '/ip-whitelist';
+      const ips = ipsInput.value.split(/\r?\n/).map(i => i.trim()).filter(Boolean);
+      if (!ips.length) {
+        log('请至少填写一个 IP');
+        return;
+      }
+      log(`请求: POST ${url}`);
+      try {
+        const res = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ ips })
+        });
+        const data = await res.json();
+        if (data && data.data === true) {
+          log('保存成功');
+        } else {
+          log(`保存失败: ${JSON.stringify(data)}`);
+        }
+      } catch (e) {
+        log(`请求出错: ${e.message}`);
+      }
+    }
+
+    document.getElementById('btnFetch').addEventListener('click', fetchWhitelist);
+    document.getElementById('btnSave').addEventListener('click', saveWhitelist);
+    document.getElementById('btnClear').addEventListener('click', () => {
+      ipsInput.value = '';
+      log('已清空输入');
+    });
+
+    log('就绪');
+  </script>
+</body>
+</html>
+
+

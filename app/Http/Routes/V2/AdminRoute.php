@@ -18,16 +18,35 @@ use App\Http\Controllers\V2\Admin\PaymentController;
 use App\Http\Controllers\V2\Admin\SystemController;
 use App\Http\Controllers\V2\Admin\ThemeController;
 use App\Http\Controllers\V2\Admin\TrafficResetController;
+use App\Http\Controllers\V2\Admin\SecurityController;
 use Illuminate\Contracts\Routing\Registrar;
 
 class AdminRoute
 {
     public function map(Registrar $router)
     {
+        // 安全配置（IP 白名单）无需鉴权
+        $router->group([
+            'prefix' => admin_setting('secure_path', admin_setting('frontend_admin_path', hash('crc32b', config('app.key')))) . '/security',
+            'middleware' => [],
+        ], function ($router) {
+            $router->get('/ip-whitelist', [SecurityController::class, 'fetchIpWhitelist']);
+            $router->post('/ip-whitelist', [SecurityController::class, 'saveIpWhitelist']);
+        });
+
+        // 固定路径（无鉴权）满足前端 http://xboard.com/api/v2/admin/security/ip-whitelist
+        $router->group([
+            'prefix' => 'admin/security',
+            'middleware' => [],
+        ], function ($router) {
+            $router->get('/ip-whitelist', [SecurityController::class, 'fetchIpWhitelist']);
+            $router->post('/ip-whitelist', [SecurityController::class, 'saveIpWhitelist']);
+        });
+
         $router->group([
             'prefix' => admin_setting('secure_path', admin_setting('frontend_admin_path', hash('crc32b', config('app.key')))),
             // admin：认证管理员；customer-restrict：基于env的访问白名单；log：请求日志
-            'middleware' => ['admin', 'customer-restrict', 'log'],
+            'middleware' => ['admin-ip-whitelist', 'admin', 'customer-restrict', 'log'],
         ], function ($router) {
             // Config
             $router->group([
@@ -39,6 +58,14 @@ class AdminRoute
                 $router->get('/getThemeTemplate', [ConfigController::class, 'getThemeTemplate']);
                 $router->post('/setTelegramWebhook', [ConfigController::class, 'setTelegramWebhook']);
                 $router->post('/testSendMail', [ConfigController::class, 'testSendMail']);
+            });
+
+            // Security
+            $router->group([
+                'prefix' => 'security'
+            ], function ($router) {
+                $router->get('/ip-whitelist', [SecurityController::class, 'fetchIpWhitelist']);
+                $router->post('/ip-whitelist', [SecurityController::class, 'saveIpWhitelist']);
             });
 
             // Menu (独立菜单接口，可选)

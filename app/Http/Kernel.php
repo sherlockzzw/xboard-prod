@@ -77,8 +77,10 @@ class Kernel extends HttpKernel
         'log' => \App\Http\Middleware\RequestLog::class,
         'server' => \App\Http\Middleware\Server::class,
         'abilities' => \Laravel\Sanctum\Http\Middleware\CheckAbilities::class,
-        'ability' => \Laravel\Sanctum\Http\Middleware\CheckForAnyAbility::class,
+    	'ability' => \Laravel\Sanctum\Http\Middleware\CheckForAnyAbility::class,
+	'admin-ip-whitelist' => \App\Http\Middleware\AdminIpWhitelist::class,
     ];
+
 
     /**
      * The priority-sorted list of middleware.

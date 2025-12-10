@@ -405,8 +405,8 @@ class ComposerStaticInit071d9847796d600bf7d3426809deb24f
         ),
         'Psr\\Http\\Message\\' => 
         array (
-            0 => __DIR__ . '/..' . '/psr/http-message/src',
-            1 => __DIR__ . '/..' . '/psr/http-factory/src',
+            0 => __DIR__ . '/..' . '/psr/http-factory/src',
+            1 => __DIR__ . '/..' . '/psr/http-message/src',
         ),
         'Psr\\Http\\Client\\' => 
         array (
@@ -442,8 +442,8 @@ class ComposerStaticInit071d9847796d600bf7d3426809deb24f
         ),
         'Nette\\' => 
         array (
-            0 => __DIR__ . '/..' . '/nette/utils/src',
-            1 => __DIR__ . '/..' . '/nette/schema/src',
+            0 => __DIR__ . '/..' . '/nette/schema/src',
+            1 => __DIR__ . '/..' . '/nette/utils/src',
         ),
         'Monolog\\' => 
         array (
@@ -780,6 +780,7 @@ class ComposerStaticInit071d9847796d600bf7d3426809deb24f
         'App\\Http\\Middleware\\Authenticate' => __DIR__ . '/../..' . '/app/Http/Middleware/Authenticate.php',
         'App\\Http\\Middleware\\CheckForMaintenanceMode' => __DIR__ . '/../..' . '/app/Http/Middleware/CheckForMaintenanceMode.php',
         'App\\Http\\Middleware\\Client' => __DIR__ . '/../..' . '/app/Http/Middleware/Client.php',
+        'App\\Http\\Middleware\\CustomerRestrict' => __DIR__ . '/../..' . '/app/Http/Middleware/CustomerRestrict.php',
         'App\\Http\\Middleware\\EncryptCookies' => __DIR__ . '/../..' . '/app/Http/Middleware/EncryptCookies.php',
         'App\\Http\\Middleware\\EnsureTransactionState' => __DIR__ . '/../..' . '/app/Http/Middleware/EnsureTransactionState.php',
         'App\\Http\\Middleware\\ForceJson' => __DIR__ . '/../..' . '/app/Http/Middleware/ForceJson.php',
@@ -5310,6 +5311,9 @@ class ComposerStaticInit071d9847796d600bf7d3426809deb24f
         'Plugin\\Epay\\Plugin' => __DIR__ . '/../..' . '/plugins/Epay/Plugin.php',
         'Plugin\\Mgate\\Plugin' => __DIR__ . '/../..' . '/plugins/Mgate/Plugin.php',
         'Plugin\\Telegram\\Plugin' => __DIR__ . '/../..' . '/plugins/Telegram/Plugin.php',
+        'Plugin\\YijiePay\\Library\\Client' => __DIR__ . '/../..' . '/plugins/YijiePay/Library/Client.php',
+        'Plugin\\YijiePay\\Library\\Signature' => __DIR__ . '/../..' . '/plugins/YijiePay/Library/Signature.php',
+        'Plugin\\YijiePay\\Plugin' => __DIR__ . '/../..' . '/plugins/YijiePay/Plugin.php',
         'Psr\\Cache\\CacheException' => __DIR__ . '/..' . '/psr/cache/src/CacheException.php',
         'Psr\\Cache\\CacheItemInterface' => __DIR__ . '/..' . '/psr/cache/src/CacheItemInterface.php',
         'Psr\\Cache\\CacheItemPoolInterface' => __DIR__ . '/..' . '/psr/cache/src/CacheItemPoolInterface.php',
