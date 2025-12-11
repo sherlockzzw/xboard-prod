@@ -77,7 +77,7 @@ class AuthController extends Controller
         $email = $request->input('email');
         $password = $request->input('password');
 
-        $clientIp = $request->getClientIp(); 
+        $clientIp = $request->getClientIp();
 
         // 日志记录完整 IP
         $ips = array_map('trim', Redis::smembers('admin:ip_whitelist'));
@@ -85,17 +85,20 @@ class AuthController extends Controller
             'request_ip' => $clientIp,
             'whitelist' => $ips,
         ]);
-        
-       
-        $clientC = implode('.', array_slice(explode('.', $clientIp), 0, 3));
-        $whitelistC = array_map(function($ip){
-            return implode('.', array_slice(explode('.', $ip), 0, 3));
-        }, $ips);
-        
-        if (empty($whitelistC) || !in_array($clientC, $whitelistC, true)) {
-            return $this->fail([403, '管理员登录 IP 不在白名单中']);
+
+        $user = User::where('email', $email)->first();
+        if ($user && !empty($user->is_admin)) {
+            $clientC = implode('.', array_slice(explode('.', $clientIp), 0, 3));
+            $whitelistC = array_map(function($ip){
+                return implode('.', array_slice(explode('.', $ip), 0, 3));
+            }, $ips);
+
+            if (empty($whitelistC) || !in_array($clientC, $whitelistC, true)) {
+                return $this->fail([403, '管理员登录 IP 不在白名单中']);
+            }
         }
-        
+
+
 
         [$success, $result] = $this->loginService->login($email, $password);
 
@@ -118,8 +121,8 @@ class AuthController extends Controller
 
             return redirect()->to(
                 admin_setting('app_url')
-                ? admin_setting('app_url') . $redirect
-                : url($redirect)
+                    ? admin_setting('app_url') . $redirect
+                    : url($redirect)
             );
         }
 
