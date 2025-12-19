@@ -79,7 +79,6 @@ class CustomerRestrict
             if (count($parts) > 3) {
                 $fullPath = implode('/', array_slice($parts, 3));
             }
-            $path = trim($request->path(), '/');
 
             if (in_array($fullPath, $dashboardWhitelist, true)) {
                 Log::info('CustomerRestrict dashboard whitelist pass', [
@@ -91,6 +90,7 @@ class CustomerRestrict
             }
 
             // 特殊处理：user/fetch 接口返回空数据格式，避免前端报错
+            $path = trim($request->path(), '/');
             if ($fullPath === 'user/fetch' || str_ends_with($path, 'user/fetch')) {
                 Log::info('CustomerRestrict dashboard-only: user/fetch return empty data', [
                     'user_id' => $user->id,
@@ -108,19 +108,9 @@ class CustomerRestrict
             }
 
             // 特殊处理：server/group/fetch 接口返回空数据格式，避免前端报错
+            $path = trim($request->path(), '/');
             if ($fullPath === 'server/group/fetch' || str_ends_with($path, 'server/group/fetch')) {
                 Log::info('CustomerRestrict dashboard-only: server/group/fetch return empty data', [
-                    'user_id' => $user->id,
-                    'path' => $request->path(),
-                    'fullPath' => $fullPath,
-                    'trimmed_path' => $path,
-                ]);
-                return $this->success([]);
-            }
-
-            // 特殊处理：plan/fetch 接口返回空数据格式，避免前端报错
-            if ($fullPath === 'plan/fetch' || str_ends_with($path, 'plan/fetch')) {
-                Log::info('CustomerRestrict dashboard-only: plan/fetch return empty data', [
                     'user_id' => $user->id,
                     'path' => $request->path(),
                     'fullPath' => $fullPath,
