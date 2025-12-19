@@ -80,16 +80,19 @@ class KnowledgeController extends Controller
         return Knowledge::select($select)->where('show', 1);
     }
 
-    private function processKnowledgeContent(array $knowledge, User $user): array
+    private function processKnowledgeContent(array $knowledge, ?User $user): array
     {
         if (!isset($knowledge['body'])) {
             return $knowledge;
         }
 
-        if (!$this->userService->isAvailable($user)) {
+        // 如果用户不存在，当作不可用处理
+        if (!$user || !$this->userService->isAvailable($user)) {
             $this->formatAccessData($knowledge['body']);
         }
-        $subscribeUrl = Helper::getSubscribeUrl($user['token']);
+        
+        // 如果用户存在，使用用户的订阅链接；否则使用空字符串
+        $subscribeUrl = $user ? Helper::getSubscribeUrl($user['token']) : '';
         $knowledge['body'] = $this->replacePlaceholders($knowledge['body'], $subscribeUrl);
 
         return $knowledge;

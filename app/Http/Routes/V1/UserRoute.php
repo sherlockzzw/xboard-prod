@@ -74,10 +74,12 @@ class UserRoute
             $router->get('/comm/config', [CommController::class, 'config']);
             $router->Post('/comm/getStripePublicKey', [CommController::class, 'getStripePublicKey']);
             // Knowledge
-            $router->get('/knowledge/fetch', [KnowledgeController::class, 'fetch']);
             $router->get('/knowledge/getCategory', [KnowledgeController::class, 'getCategory']);
             // Stat
             $router->get('/stat/getTrafficLog', [StatController::class, 'getTrafficLog']);
         });
+
+        // Knowledge - 不需要鉴权的路由
+        $router->get('/user/knowledge/fetch', [KnowledgeController::class, 'fetch']);
     }
 }

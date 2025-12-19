@@ -34,14 +34,13 @@ services:
       - redis
       - mysql
   redis:
-    image: redis:8.0-alpine
+    image: redis:7.2-alpine
     command: >
       redis-server
       --bind 0.0.0.0
-      --port 6379
       --protected-mode no
     ports:
-      - "6379:6379"   
+      - "0.0.0.0:16379:6379"     
     restart: unless-stopped
     user: "1001:1001"
     volumes:
@@ -76,5 +75,6 @@ services:
     volumes:
       - ./.docker/nginx/conf.d:/etc/nginx/conf.d:ro
       - /home/xboard/.docker/nginx/certs/https:/etc/nginx/certs:ro
-      - /home/xboard/public:/www/public:ro   
+      - /home/xboard/public:/www/public:ro 
+      - /home/xboard/storage/img:/home/xboard/storage/img:ro  
 
