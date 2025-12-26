@@ -157,8 +157,10 @@ class UserController extends Controller
         $current = $request->input('current', 1);
         $pageSize = $request->input('pageSize', 10);
 
+        $userTable = (new User())->getTable();
+
         $userModel = User::with(['plan:id,name', 'invite_user:id,email', 'group:id,name'])
-            ->select(DB::raw('*, (u+d) as total_used'));
+            ->select(DB::raw("{$userTable}.*, (u+d) as total_used"));
 
         $this->applyFiltersAndSorts($request, $userModel);
 
@@ -184,6 +186,8 @@ class UserController extends Controller
         $user['balance'] = $user['balance'] / 100;
         $user['commission_balance'] = $user['commission_balance'] / 100;
         $user['subscribe_url'] = Helper::getSubscribeUrl($user['token']);
+        $user['online_count'] = isset($user['online_count']) ? (int) $user['online_count'] : 0;
+        $user['last_online_at'] = $user['last_online_at'] ?? null;
         return $user;
     }
 

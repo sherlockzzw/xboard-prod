@@ -51,7 +51,7 @@ class UserRoute
             $router->get('/invite/fetch', [InviteController::class, 'fetch']);
             $router->get('/invite/details', [InviteController::class, 'details']);
             // Notice
-            $router->get('/notice/fetch', [NoticeController::class, 'fetch']);
+//            $router->get('/notice/fetch', [NoticeController::class, 'fetch']);
             // Ticket
             $router->post('/ticket/reply', [TicketController::class, 'reply']);
             $router->post('/ticket/close', [TicketController::class, 'close']);
@@ -80,6 +80,7 @@ class UserRoute
         });
 
         // Knowledge - 不需要鉴权的路由
+        $router->get('user/notice/fetch', [NoticeController::class, 'fetch']);
         $router->get('/user/knowledge/fetch', [KnowledgeController::class, 'fetch']);
     }
 }

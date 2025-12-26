@@ -3,6 +3,7 @@
 namespace App\Protocols;
 
 use App\Models\Server;
+use App\Utils\Helper;
 use Illuminate\Support\Facades\File;
 use Symfony\Component\Yaml\Yaml;
 use App\Support\AbstractProtocol;
@@ -100,12 +101,19 @@ class Clash extends AbstractProtocol
 
         $yaml = Yaml::dump($config, 2, 4, Yaml::DUMP_EMPTY_ARRAY_AS_SEQUENCE);
         $yaml = str_replace('$app_name', admin_setting('app_name', 'XBoard'), $yaml);
-        return response($yaml)
+
+        // 默认保持下载行为；如果带 raw=1 参数则直接展示文本，便于浏览器查看/复制
+        $response = response($yaml)
             ->header('content-type', 'text/yaml')
             ->header('subscription-userinfo', "upload={$user['u']}; download={$user['d']}; total={$user['transfer_enable']}; expire={$user['expired_at']}")
             ->header('profile-update-interval', '24')
-            ->header('content-disposition', 'attachment;filename*=UTF-8\'\'' . rawurlencode($appName))
             ->header('profile-web-page-url', admin_setting('app_url'));
+
+        if (!request()->boolean('raw', false)) {
+            $response->header('content-disposition', 'attachment;filename*=UTF-8\'\'' . rawurlencode($appName));
+        }
+
+        return $response;
     }
 
     /**
@@ -128,7 +136,7 @@ class Clash extends AbstractProtocol
         $array = [];
         $array['name'] = $server['name'];
         $array['type'] = 'ss';
-        $array['server'] = $server['host'];
+        $array['server'] = Helper::wrapIPv6($server['host']);
         $array['port'] = $server['port'];
         $array['cipher'] = data_get($protocol_settings, 'cipher');
         $array['password'] = $uuid;
@@ -184,7 +192,7 @@ class Clash extends AbstractProtocol
         $array = [];
         $array['name'] = $server['name'];
         $array['type'] = 'vmess';
-        $array['server'] = $server['host'];
+        $array['server'] = Helper::wrapIPv6($server['host']);
         $array['port'] = $server['port'];
         $array['uuid'] = $uuid;
         $array['alterId'] = 0;
@@ -235,7 +243,7 @@ class Clash extends AbstractProtocol
         $array = [];
         $array['name'] = $server['name'];
         $array['type'] = 'trojan';
-        $array['server'] = $server['host'];
+        $array['server'] = Helper::wrapIPv6($server['host']);
         $array['port'] = $server['port'];
         $array['password'] = $password;
         $array['udp'] = true;
@@ -273,7 +281,7 @@ class Clash extends AbstractProtocol
         $array = [];
         $array['name'] = $server['name'];
         $array['type'] = 'socks5';
-        $array['server'] = $server['host'];
+        $array['server'] = Helper::wrapIPv6($server['host']);
         $array['port'] = $server['port'];
         $array['udp'] = true;
 
@@ -295,7 +303,7 @@ class Clash extends AbstractProtocol
         $array = [];
         $array['name'] = $server['name'];
         $array['type'] = 'http';
-        $array['server'] = $server['host'];
+        $array['server'] = Helper::wrapIPv6($server['host']);
         $array['port'] = $server['port'];
 
         $array['username'] = $password;

@@ -122,7 +122,7 @@ class Helper
     public static function getSubscribeUrl(string $token, $subscribeUrl = null)
     {
         $path = route('client.subscribe', ['token' => $token], false);
-        
+        $path .= (str_contains($path, '?') ? '&' : '?') . 'flag=clash'; 
         if ($subscribeUrl) {
             $finalUrl = rtrim($subscribeUrl, '/') . $path;
             return HookManager::filter('subscribe.url', $finalUrl);

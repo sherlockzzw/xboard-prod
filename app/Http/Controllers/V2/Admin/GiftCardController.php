@@ -224,7 +224,7 @@ class GiftCardController extends Controller
             'count' => 'required|integer|min:1|max:10000',
             'prefix' => 'nullable|string|max:10|regex:/^[A-Z0-9]*$/',
             'expires_hours' => 'nullable|integer|min:1',
-            'max_usage' => 'integer|min:1|max:1000',
+            'max_usage' => 'integer|min:1|max:100000',
         ], [
             'template_id.required' => '请选择礼品卡模板',
             'count.required' => '请指定生成数量',
@@ -553,7 +553,7 @@ class GiftCardController extends Controller
         $validatedData = $request->validate([
             'id' => 'required|integer|exists:v2_gift_card_code,id',
             'expires_at' => 'sometimes|nullable|integer',
-            'max_usage' => 'sometimes|integer|min:1|max:1000',
+            'max_usage' => 'sometimes|integer|min:1|max:100000',
             'status' => 'sometimes|integer|in:0,1,2,3',
         ]);
 
