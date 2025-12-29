@@ -93,7 +93,18 @@ class ConfigController extends Controller
         }
 
         return $this->success($configMappings);
-    }
+    } 
+    public function getAppVersion()
+    {
+        $key = 'app';
+        $configMappings = $this->getConfigMappings();
+
+        if ($key && isset($configMappings[$key])) {
+            return $this->success([$key => $configMappings[$key]]);
+        }
+
+        return $this->success($configMappings);
+    }	
 
     /**
      * 获取配置映射数据

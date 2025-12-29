@@ -299,6 +299,6 @@ class AdminRoute
                 $router->post('reset-user', [TrafficResetController::class, 'resetUser']);
             });
         });
-
+	$router->get('/config/version',[ConfigController::class, 'getAppVersion']);
     }
 }
