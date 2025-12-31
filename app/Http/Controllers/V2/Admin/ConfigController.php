@@ -96,7 +96,7 @@ class ConfigController extends Controller
     } 
     public function getAppVersion()
     {
-        $key = 'app';
+        $key = 'appversion';
         $configMappings = $this->getConfigMappings();
 
         if ($key && isset($configMappings[$key])) {
@@ -190,7 +190,17 @@ class ConfigController extends Controller
                 'macos_version' => admin_setting('macos_version', ''),
                 'macos_download_url' => admin_setting('macos_download_url', ''),
                 'android_version' => admin_setting('android_version', ''),
-                'android_download_url' => admin_setting('android_download_url', '')
+		'android_download_url' => admin_setting('android_download_url', '')
+	    ],
+	    'appversion'                => [
+                'windows_version'      => admin_setting('windows_version', ''),
+                'windows_download_url' => admin_setting('windows_download_url', ''),
+                'macos_version'        => admin_setting('macos_version', ''),
+                'macos_download_url'   => admin_setting('macos_download_url', ''),
+                'android_version'      => admin_setting('android_version', ''),
+                'android_download_url' => admin_setting('android_download_url', ''),
+                'macosintel_version'   => admin_setting('macosintel_version', ''),
+                'macosintel_download_url' => admin_setting('macosintel_download_url', '')
             ],
             'safe' => [
                 'email_verify' => (bool) admin_setting('email_verify', 0),

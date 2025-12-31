@@ -21,7 +21,9 @@ class GuestRoute
             // Payment
             $router->match(['get', 'post'], '/payment/notify/{method}/{uuid}', [PaymentController::class, 'notify']);
             // Comm
-            $router->get('/comm/config', [CommController::class, 'config']);
+	    $router->get('/comm/config', [CommController::class, 'config']);
+	    $router->get('/comm/app-config', [CommController::class, 'getAppConfig']);
+            $router->post('/comm/app-config', [CommController::class, 'saveAppConfig']);
         });
     }
 }

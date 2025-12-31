@@ -2,17 +2,22 @@
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
-  <title>管理员登录 IP 白名单</title>
+  <title>管理员登录 IP 白名单 & 客户端下载配置</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
-    body { font-family: Arial, sans-serif; max-width: 720px; margin: 40px auto; padding: 0 16px; color: #1f2933; }
+    body { font-family: Arial, sans-serif; max-width: 900px; margin: 40px auto; padding: 0 16px; color: #1f2933; }
     h1 { font-size: 22px; margin-bottom: 12px; }
+    h2 { font-size: 18px; margin-top: 32px; margin-bottom: 12px; border-bottom: 2px solid #e5e7eb; padding-bottom: 8px; }
     label { display: block; margin: 12px 0 6px; font-weight: bold; }
+    input[type="text"], input[type="number"] { width: 100%; box-sizing: border-box; padding: 8px; border: 1px solid #cfd7df; border-radius: 6px; font-size: 14px; }
     textarea { width: 100%; box-sizing: border-box; padding: 8px; border: 1px solid #cfd7df; border-radius: 6px; min-height: 200px; font-family: monospace; }
     button { padding: 10px 16px; margin-right: 8px; border: none; border-radius: 6px; cursor: pointer; background: #2563eb; color: #fff; }
     button.secondary { background: #6b7280; }
     .muted { color: #65748b; font-size: 13px; }
     .log { margin-top: 16px; padding: 12px; border: 1px solid #e5e7eb; border-radius: 6px; background: #f9fafb; white-space: pre-wrap; font-size: 13px; }
+    .config-section { margin-bottom: 24px; padding: 16px; border: 1px solid #e5e7eb; border-radius: 8px; background: #fafbfc; }
+    .config-row { display: grid; grid-template-columns: 1fr 2fr; gap: 12px; margin-bottom: 12px; align-items: center; }
+    .config-row label { margin: 0; }
   </style>
 </head>
 <body>
@@ -28,10 +33,59 @@
 
   <div class="log" id="log">等待操作...</div>
 
+  <h2>客户端下载配置</h2>
+  <div class="config-section">
+    <h3 style="margin-top: 0; font-size: 16px;">Windows</h3>
+    <div class="config-row">
+      <label for="windows_version">Windows版本</label>
+      <input type="text" id="windows_version" placeholder="例如: 1.0.1">
+    </div>
+    <div class="config-row">
+      <label for="windows_download_url">Windows下载地址</label>
+      <input type="text" id="windows_download_url" placeholder="例如: https://example.com/download/windows.exe">
+    </div>
+
+    <h3 style="margin-top: 16px; font-size: 16px;">macOS (M 芯片)</h3>
+    <div class="config-row">
+      <label for="macos_version">macOS版本</label>
+      <input type="text" id="macos_version" placeholder="例如: 1.1">
+    </div>
+    <div class="config-row">
+      <label for="macos_download_url">macOS下载地址</label>
+      <input type="text" id="macos_download_url" placeholder="例如: https://example.com/download/macos.dmg">
+    </div>
+
+    <h3 style="margin-top: 16px; font-size: 16px;">macOS (Intel 芯片)</h3>
+    <div class="config-row">
+      <label for="macosintel_version">macOS Intel版本</label>
+      <input type="text" id="macosintel_version" placeholder="例如: 1.1">
+    </div>
+    <div class="config-row">
+      <label for="macosintel_download_url">macOS Intel下载地址</label>
+      <input type="text" id="macosintel_download_url" placeholder="例如: https://example.com/download/macos-intel.dmg">
+    </div>
+
+    <h3 style="margin-top: 16px; font-size: 16px;">Android</h3>
+    <div class="config-row">
+      <label for="android_version">Android版本</label>
+      <input type="text" id="android_version" placeholder="例如: 1.0.1">
+    </div>
+    <div class="config-row">
+      <label for="android_download_url">Android下载地址</label>
+      <input type="text" id="android_download_url" placeholder="例如: https://example.com/download/android.apk">
+    </div>
+
+    <div style="margin-top: 16px;">
+      <button id="btnFetchAppConfig">读取客户端配置</button>
+      <button id="btnSaveAppConfig">保存客户端配置</button>
+    </div>
+  </div>
+
   <script>
     const logBox = document.getElementById('log');
     const ipsInput = document.getElementById('ips');
     const API_BASE = 'https://baiyangweb.lifewikipedia.com/api/v2/admin/security';
+    const APP_CONFIG_API = 'https://baiyangweb.lifewikipedia.com/api/v1/guest/comm/app-config';
 
     function log(message) {
       const now = new Date().toLocaleTimeString();
@@ -80,16 +134,93 @@
       }
     }
 
+    async function fetchAppConfig() {
+      log(`请求: GET ${APP_CONFIG_API}`);
+      try {
+        const res = await fetch(APP_CONFIG_API);
+        const data = await res.json();
+        if (data && data.data && data.data.app) {
+          const app = data.data.app;
+          document.getElementById('windows_version').value = app.windows_version || '';
+          document.getElementById('windows_download_url').value = app.windows_download_url || '';
+          document.getElementById('macos_version').value = app.macos_version || '';
+          document.getElementById('macos_download_url').value = app.macos_download_url || '';
+          document.getElementById('macosintel_version').value = app.macosintel_version || '';
+          document.getElementById('macosintel_download_url').value = app.macosintel_download_url || '';
+          document.getElementById('android_version').value = app.android_version || '';
+          document.getElementById('android_download_url').value = app.android_download_url || '';
+          log('已读取客户端配置');
+        } else {
+          log(`读取失败: ${JSON.stringify(data)}`);
+        }
+      } catch (e) {
+        log(`请求出错: ${e.message}`);
+      }
+    }
+
+    async function saveAppConfig() {
+      log(`请求: POST ${APP_CONFIG_API}`);
+      try {
+        const config = {
+          windows_version: document.getElementById('windows_version').value.trim(),
+          windows_download_url: document.getElementById('windows_download_url').value.trim(),
+          macos_version: document.getElementById('macos_version').value.trim(),
+          macos_download_url: document.getElementById('macos_download_url').value.trim(),
+          macosintel_version: document.getElementById('macosintel_version').value.trim(),
+          macosintel_download_url: document.getElementById('macosintel_download_url').value.trim(),
+          android_version: document.getElementById('android_version').value.trim(),
+          android_download_url: document.getElementById('android_download_url').value.trim()
+        };
+
+        const res = await fetch(APP_CONFIG_API, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(config)
+        });
+        const data = await res.json();
+        if (data && data.data === true) {
+          log('客户端配置保存成功');
+        } else {
+          log(`保存失败: ${JSON.stringify(data)}`);
+        }
+      } catch (e) {
+        log(`请求出错: ${e.message}`);
+      }
+    }
+
     document.getElementById('btnFetch').addEventListener('click', fetchWhitelist);
     document.getElementById('btnSave').addEventListener('click', saveWhitelist);
     document.getElementById('btnClear').addEventListener('click', () => {
       ipsInput.value = '';
       log('已清空输入');
     });
+    document.getElementById('btnFetchAppConfig').addEventListener('click', fetchAppConfig);
+    document.getElementById('btnSaveAppConfig').addEventListener('click', saveAppConfig);
 
     log('就绪');
   </script>
 </body>
 </html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 

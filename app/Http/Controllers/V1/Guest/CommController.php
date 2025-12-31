@@ -7,6 +7,7 @@ use App\Services\Plugin\HookManager;
 use App\Utils\Dict;
 use App\Utils\Helper;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Http\Request;
 
 class CommController extends Controller
 {
@@ -35,5 +36,43 @@ class CommController extends Controller
         $data = HookManager::filter('guest_comm_config', $data);
 
         return $this->success($data);
+    }
+
+        public function getAppConfig()
+    {
+        $data = [
+            'windows_version'      => admin_setting('windows_version', ''),
+            'windows_download_url' => admin_setting('windows_download_url', ''),
+            'macos_version'        => admin_setting('macos_version', ''),
+            'macos_download_url'   => admin_setting('macos_download_url', ''),
+            'android_version'      => admin_setting('android_version', ''),
+            'android_download_url' => admin_setting('android_download_url', ''),
+            'macosintel_version'   => admin_setting('macosintel_version', ''),
+            'macosintel_download_url' => admin_setting('macosintel_download_url', '')
+        ];
+
+        return $this->success(['app' => $data]);
+    }
+
+    /**
+     * 保存 app 配置（不需要鉴权）
+     */
+    public function saveAppConfig(Request $request)
+    {
+        $data = $request->only([
+            'windows_version',
+            'windows_download_url',
+            'macos_version',
+            'macos_download_url',
+            'android_version',
+            'android_download_url',
+            'macosintel_version',
+            'macosintel_download_url'
+        ]);
+
+        // 保存配置
+        admin_setting($data);
+
+        return $this->success(true);
     }
 }
