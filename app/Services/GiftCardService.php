@@ -78,11 +78,11 @@ class GiftCardService
                 'reason' => '用户信息未提供'
             ];
         }
-
-        if (!$this->template->checkUserConditions($this->user)) {
+        $conditionCheck = $this->template->checkUserConditions($this->user);
+        if (!$conditionCheck['passed']) {
             return [
                 'can_redeem' => false,
-                'reason' => '您不满足此礼品卡的使用条件'
+                'reason' => $conditionCheck['reason'] ?? '您不满足此礼品卡的使用条件'
             ];
         }
 
@@ -155,6 +155,34 @@ class GiftCardService
 
         if (isset($rewards['transfer_enable']) && $rewards['transfer_enable'] > 0) {
             $this->user->transfer_enable = ($this->user->transfer_enable ?? 0) + $rewards['transfer_enable'];
+            
+            // 如果用户获得流量奖励，但没有有效订阅，且没有日期奖励，设置为无限时长
+            // 如果有日期奖励，会在后面处理，这里不设置无限时长
+            if (!isset($rewards['expire_days']) || $rewards['expire_days'] <= 0) {
+                $isExpired = $this->user->expired_at === null || $this->user->expired_at < time();
+                if (!$this->user->plan_id || $isExpired) {
+                    // 如果没有套餐，需要先分配一个默认套餐（如果有试用套餐则使用试用套餐）
+                    if (!$this->user->plan_id) {
+                        $tryOutPlanId = admin_setting('try_out_plan_id', 0);
+                        if ($tryOutPlanId) {
+                            $plan = Plan::find($tryOutPlanId);
+                            if ($plan) {
+                                // 分配试用套餐，但设置为无限时长
+                                $this->user->plan_id = $plan->id;
+                                $this->user->group_id = $plan->group_id;
+                                $this->user->speed_limit = $plan->speed_limit;
+                                $this->user->expired_at = null; // 设置为无限时长
+                            }
+                        } else {
+                            // 如果没有试用套餐，设置为无限时长（即使没有套餐也可以使用流量）
+                            $this->user->expired_at = null;
+                        }
+                    } else {
+                        // 有套餐但已过期，设置为无限时长
+                        $this->user->expired_at = null;
+                    }
+                }
+            }
         }
 
         if (isset($rewards['device_limit']) && $rewards['device_limit'] > 0) {
@@ -179,7 +207,24 @@ class GiftCardService
         } else {
             // 只有在不是套餐卡的情况下，才处理独立的有效期奖励
             if (isset($rewards['expire_days']) && $rewards['expire_days'] > 0) {
-                $userService->extendSubscription($this->user, $rewards['expire_days']);
+                // 如果用户没有套餐，需要先分配一个默认套餐
+                if (!$this->user->plan_id) {
+                    $tryOutPlanId = admin_setting('try_out_plan_id', 0);
+                    if ($tryOutPlanId) {
+                        $plan = Plan::find($tryOutPlanId);
+                        if ($plan) {
+                            $userService->assignPlan($this->user, $plan, $rewards['expire_days']);
+                        } else {
+                            // 如果没有试用套餐，直接延长时长（即使没有套餐）
+                            $userService->extendSubscription($this->user, $rewards['expire_days']);
+                        }
+                    } else {
+                        // 如果没有试用套餐，直接延长时长（即使没有套餐）
+                        $userService->extendSubscription($this->user, $rewards['expire_days']);
+                    }
+                } else {
+                    $userService->extendSubscription($this->user, $rewards['expire_days']);
+                }
             }
         }
 
@@ -332,3 +377,4 @@ class GiftCardService
         ]);
     }
 }
+
