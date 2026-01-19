@@ -157,7 +157,8 @@ class CustomerRestrict
             'stat/getTrafficRank',
             'stat/getStats',
             'system/getSystemStatus',
-            'system/getQueueStats'
+	    'system/getQueueStats',
+	    'order/fetch'
         ];
 
         $parts = explode('/', trim($request->path(), '/'));

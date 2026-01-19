@@ -260,6 +260,9 @@ class UserService
      */
     public function extendSubscription(User $user, int $days): User
     {
+        if ($user->expired_at === NULL) {
+          return $user;
+        }    
         $currentExpired = $user->expired_at ?? time();
         $user->expired_at = max($currentExpired, time()) + ($days * 86400);
 

@@ -115,53 +115,82 @@ class GiftCardTemplate extends Model
 
     /**
      * 检查用户是否满足使用条件
-     * @return array ['passed' => bool, 'reason' => string|null]
      */
-    public function checkUserConditions(User $user): array
+    public function checkUserConditions(User $user): bool
     {
-        switch ($this->type) {
-            case self::TYPE_GENERAL:
-                // 通用礼品卡对所有用户开放，不检查订阅状态
-                break;
-            case self::TYPE_PLAN:
-                if ($user->isActive()) {
-                    return ['passed' => false, 'reason' => '您已有有效订阅，无法使用套餐礼品卡'];
-                }
-                break;
-        }
-
         $conditions = $this->conditions ?? [];
+        
+        // 如果没有配置条件，则允许使用
+        if (empty($conditions)) {
+            return true;
+        }
 
-        // 检查新用户条件
+        // 1. 检查新用户注册天数限制
+        if (isset($conditions['new_user_max_days']) && $conditions['new_user_max_days'] > 0) {
+            $userDays = floor((time() - $user->created_at) / 86400); // 注册天数
+            if ($userDays > $conditions['new_user_max_days']) {
+                return false;
+            }
+        }
+
+        // 检查是否需要查询付费订单（用于"仅限新用户"和"仅限付费用户"）
+        $needCheckPaidOrder = (isset($conditions['new_user_only']) && $conditions['new_user_only']) ||
+                               (isset($conditions['paid_user_only']) && $conditions['paid_user_only']);
+        
+        $hasPaidOrder = null;
+        if ($needCheckPaidOrder) {
+            // 付费用户定义为：有已完成或已折抵的订单
+            $hasPaidOrder = \App\Models\Order::where('user_id', $user->id)
+                ->whereIn('status', [
+                    \App\Models\Order::STATUS_COMPLETED,
+                    \App\Models\Order::STATUS_DISCOUNTED
+                ])
+                ->exists();
+        }
+
+        // 2. 检查是否仅限新用户
         if (isset($conditions['new_user_only']) && $conditions['new_user_only']) {
-            $maxDays = $conditions['new_user_max_days'] ?? 7;
-            if ($user->created_at < (time() - ($maxDays * 86400))) {
-                return ['passed' => false, 'reason' => '此礼品卡仅限新用户使用（注册' . $maxDays . '天内）'];
+            // 新用户定义为：没有已完成或已折抵的订单
+            if ($hasPaidOrder) {
+                return false;
             }
         }
 
-        // 检查付费用户条件
+        // 3. 检查是否仅限付费用户
         if (isset($conditions['paid_user_only']) && $conditions['paid_user_only']) {
-            $paidOrderExists = $user->orders()->where('status', Order::STATUS_COMPLETED)->exists();
-            if (!$paidOrderExists) {
-                return ['passed' => false, 'reason' => '此礼品卡仅限付费用户使用'];
+            if (!$hasPaidOrder) {
+                return false;
             }
         }
 
-        // 检查允许的套餐
-        if (isset($conditions['allowed_plans']) && is_array($conditions['allowed_plans']) && !empty($conditions['allowed_plans'])) {
-            if ($user->plan_id && !in_array($user->plan_id, $conditions['allowed_plans'])) {
-                return ['passed' => false, 'reason' => '您当前的套餐不符合此礼品卡的使用条件'];
-            }
-        }
-        // 检查是否需要邀请人
+        // 4. 检查是否需要邀请关系
         if (isset($conditions['require_invite']) && $conditions['require_invite']) {
             if (!$user->invite_user_id) {
-                return ['passed' => false, 'reason' => '此礼品卡需要通过邀请注册的用户才能使用'];
+                return false;
             }
         }
 
-        return ['passed' => true, 'reason' => null];
+        // 5. 检查允许的套餐
+        if (isset($conditions['allowed_plans']) && is_array($conditions['allowed_plans']) && !empty($conditions['allowed_plans'])) {
+            // 如果用户没有套餐，且允许列表不为空，则不允许
+            if (!$user->plan_id) {
+                return false;
+            }
+            // 如果用户套餐不在允许列表中，则不允许
+            if (!in_array($user->plan_id, $conditions['allowed_plans'])) {
+                return false;
+            }
+        }
+
+        // 6. 检查禁止的套餐
+        if (isset($conditions['disallowed_plans']) && is_array($conditions['disallowed_plans']) && !empty($conditions['disallowed_plans'])) {
+            // 如果用户有套餐，且该套餐在禁止列表中，则不允许
+            if ($user->plan_id && in_array($user->plan_id, $conditions['disallowed_plans'])) {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     /**
