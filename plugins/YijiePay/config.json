@@ -1,0 +1,8 @@
+{
+    "name": "Yijie Pay",
+    "code": "yijie_pay",
+    "type": "payment",
+    "version": "0.1.0",
+    "description": "YiJie fourth-party payment adapter (skeleton)",
+    "author": "XBoard Team"
+}
