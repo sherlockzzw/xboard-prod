@@ -19,6 +19,7 @@ use App\Http\Controllers\V2\Admin\SystemController;
 use App\Http\Controllers\V2\Admin\ThemeController;
 use App\Http\Controllers\V2\Admin\TrafficResetController;
 use App\Http\Controllers\V2\Admin\SecurityController;
+use App\Http\Controllers\V2\Admin\AdminRequestLogController;
 use Illuminate\Contracts\Routing\Registrar;
 
 class AdminRoute
@@ -133,7 +134,7 @@ class AdminRoute
                 $router->post('/update', [UserController::class, 'update']);
                 $router->get('/getUserInfoById', [UserController::class, 'getUserInfoById']);
                 $router->post('/generate', [UserController::class, 'generate']);
-                $router->post('/dumpCSV', [UserController::class, 'dumpCSV']);
+                // $router->post('/dumpCSV', [UserController::class, 'dumpCSV']);
                 $router->post('/sendMail', [UserController::class, 'sendMail']);
                 $router->post('/ban', [UserController::class, 'ban']);
                 $router->post('/resetSecret', [UserController::class, 'resetSecret']);
@@ -298,7 +299,8 @@ class AdminRoute
                 $router->get('user/{userId}/history', [TrafficResetController::class, 'userHistory']);
                 $router->post('reset-user', [TrafficResetController::class, 'resetUser']);
             });
-        });
+	});
+	$router->any('/admin-request-logs', [AdminRequestLogController::class, 'fetch']);
 	$router->get('/config/version',[ConfigController::class, 'getAppVersion']);
     }
 }

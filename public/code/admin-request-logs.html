@@ -1,0 +1,290 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>后台请求日志</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 1200px; margin: 40px auto; padding: 0 16px; color: #1f2933; }
+        h1 { font-size: 22px; margin-bottom: 12px; }
+        .muted { color: #65748b; font-size: 13px; }
+        .panel { border: 1px solid #e5e7eb; border-radius: 10px; padding: 14px; background: #fff; }
+        .filters { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 10px; align-items: end; }
+        .filters label { display: block; font-size: 12px; color: #374151; margin-bottom: 6px; font-weight: bold; }
+        .filters input, .filters select { width: 100%; box-sizing: border-box; padding: 8px; border: 1px solid #cfd7df; border-radius: 8px; font-size: 14px; }
+        .actions { display: flex; gap: 8px; }
+        button { padding: 10px 14px; border: none; border-radius: 8px; cursor: pointer; background: #2563eb; color: #fff; font-size: 14px; }
+        button.secondary { background: #6b7280; }
+        button:disabled { opacity: 0.6; cursor: not-allowed; }
+        table { width: 100%; border-collapse: collapse; margin-top: 14px; }
+        th, td { border-bottom: 1px solid #eef2f7; padding: 10px; text-align: left; vertical-align: top; font-size: 13px; }
+        th { background: #f8fafc; color: #374151; position: sticky; top: 0; z-index: 1; }
+        .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
+        .badge { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 12px; }
+        .badge.ok { background: #dcfce7; color: #166534; }
+        .badge.err { background: #fee2e2; color: #991b1b; }
+        .pager { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 12px; }
+        .pager .left { display: flex; align-items: center; gap: 10px; }
+        .log { margin-top: 12px; padding: 10px; border: 1px solid #e5e7eb; border-radius: 8px; background: #f9fafb; white-space: pre-wrap; font-size: 12px; }
+        details pre { margin: 8px 0 0; padding: 10px; background: #0b1020; color: #d1d5db; border-radius: 8px; overflow: auto; }
+
+        @media (max-width: 980px) {
+            .filters { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        }
+    </style>
+</head>
+<body>
+<h1>后台请求日志</h1>
+
+
+<div class="panel" style="margin-top: 14px;">
+    <div class="filters">
+        <div>
+            <label for="adminEmail">管理员</label>
+            <input id="adminEmail" type="text" placeholder="按邮箱模糊查询（例如：admin@xx.com）" />
+        </div>
+        <div>
+            <label for="method">方法</label>
+            <select id="method">
+                <option value="">全部</option>
+                <option value="GET">GET（查询）</option>
+                <option value="POST">POST（新增）</option>
+                <option value="PUT">PUT（更新）</option>
+                <option value="PATCH">PATCH（更新）</option>
+                <option value="DELETE">DELETE（删除）</option>
+                <option value="OPTIONS">OPTIONS</option>
+            </select>
+        </div>
+        <div>
+            <label for="path">路径包含</label>
+            <input id="path" type="text" placeholder="例如：admin/user" />
+        </div>
+        <div>
+            <label for="startAt">开始时间</label>
+            <input id="startAt" type="datetime-local" />
+        </div>
+        <div>
+            <label for="endAt">结束时间</label>
+            <input id="endAt" type="datetime-local" />
+        </div>
+        <div>
+            <label for="pageSize">每页数量</label>
+            <select id="pageSize">
+                <option value="20">20</option>
+                <option value="50">50</option>
+                <option value="100">100</option>
+                <option value="200">200</option>
+            </select>
+        </div>
+        <div class="actions">
+            <button id="btnSearch">查询</button>
+            <button class="secondary" id="btnReset">重置</button>
+        </div>
+    </div>
+
+    <div class="pager">
+        <div class="left">
+            <button class="secondary" id="btnPrev">上一页</button>
+            <button class="secondary" id="btnNext">下一页</button>
+            <div class="muted">第 <span id="page">1</span> 页，共 <span id="total">0</span> 条</div>
+        </div>
+    </div>
+
+    <div style="overflow: auto; max-height: 70vh; border: 1px solid #eef2f7; border-radius: 10px; margin-top: 12px;">
+        <table>
+            <thead>
+            <tr>
+                <th style="width: 70px;">ID</th>
+                <th style="width: 90px;">admin_id</th>
+                <th style="width: 220px;">管理员</th>
+                <th style="width: 110px;">方法</th>
+                <th>路径</th>
+                <th style="width: 110px;">状态</th>
+                <th style="width: 110px;">耗时</th>
+                <th style="width: 160px;">IP</th>
+                <th style="width: 220px;">时间</th>
+                <th style="width: 220px;">请求体</th>
+            </tr>
+            </thead>
+            <tbody id="tbody">
+            <tr><td colspan="10" class="muted">等待查询...</td></tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div class="log" id="log">就绪</div>
+</div>
+
+<script>
+    const el = (id) => document.getElementById(id);
+    const logBox = el('log');
+    const tbody = el('tbody');
+    const pageEl = el('page');
+    const totalEl = el('total');
+
+    const API_BASE = 'https://baiyangweb.lifewikipedia.com/api/v2';
+
+    let currentPage = 1;
+    let lastTotal = 0;
+
+    function log(message) {
+        const now = new Date().toLocaleTimeString();
+        logBox.textContent = `[${now}] ${message}`;
+    }
+
+    function formatTs(ts) {
+        if (!ts) return '';
+        const d = new Date(ts * 1000);
+        return d.toLocaleString();
+    }
+
+    function escapeHtml(str) {
+        return String(str)
+            .replaceAll('&', '&amp;')
+            .replaceAll('<', '&lt;')
+            .replaceAll('>', '&gt;')
+            .replaceAll('"', '&quot;')
+            .replaceAll("'", '&#39;');
+    }
+
+    function toUnixSeconds(datetimeLocal) {
+        if (!datetimeLocal) return '';
+        const ms = new Date(datetimeLocal).getTime();
+        if (!Number.isFinite(ms)) return '';
+        return String(Math.floor(ms / 1000));
+    }
+
+    function methodLabel(method) {
+        const m = String(method || '').toUpperCase();
+        if (m === 'GET') return 'GET（查询）';
+        if (m === 'POST') return 'POST（新增）';
+        if (m === 'PUT') return 'PUT（更新）';
+        if (m === 'PATCH') return 'PATCH（更新）';
+        if (m === 'DELETE') return 'DELETE（删除）';
+        if (m === 'OPTIONS') return 'OPTIONS';
+        return m;
+    }
+
+    function buildQuery(page) {
+        const params = new URLSearchParams();
+        params.set('page', String(page));
+        params.set('pageSize', el('pageSize').value);
+
+        const adminEmail = (el('adminEmail').value || '').trim();
+        const method = (el('method').value || '').trim();
+        const path = (el('path').value || '').trim();
+
+        const startAt = toUnixSeconds((el('startAt').value || '').trim());
+        const endAt = toUnixSeconds((el('endAt').value || '').trim());
+
+        if (adminEmail !== '') params.set('admin_email', adminEmail);
+        if (method !== '') params.set('method', method);
+        if (path !== '') params.set('path', path);
+        if (startAt !== '') params.set('start_at', startAt);
+        if (endAt !== '') params.set('end_at', endAt);
+
+        return params;
+    }
+
+    function renderRows(list) {
+        if (!Array.isArray(list) || list.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="10" class="muted">无数据</td></tr>';
+            return;
+        }
+
+        tbody.innerHTML = list.map(row => {
+            const status = Number(row.status_code || 0);
+            const ok = status > 0 && status < 400;
+            const badgeCls = ok ? 'badge ok' : 'badge err';
+
+            const body = row.body ? JSON.stringify(row.body) : '';
+            const bodyPreview = body.length > 120 ? body.slice(0, 120) + '…' : body;
+
+            const adminEmail = row.admin_email || '';
+
+            return `
+<tr>
+  <td class="mono">${row.id ?? ''}</td>
+  <td class="mono">${row.admin_id ?? ''}</td>
+  <td class="mono">${escapeHtml(adminEmail)}</td>
+  <td class="mono">${escapeHtml(methodLabel(row.method))}</td>
+  <td class="mono">${escapeHtml(row.path ?? '')}</td>
+  <td><span class="${badgeCls}">${status || ''}</span></td>
+  <td class="mono">${row.duration_ms ?? ''} ms</td>
+  <td class="mono">${row.ip ?? ''}</td>
+  <td>${formatTs(row.created_at)}</td>
+  <td>
+    <details>
+      <summary class="mono">${escapeHtml(bodyPreview)}</summary>
+      <pre>${escapeHtml(body)}</pre>
+    </details>
+  </td>
+</tr>`;
+        }).join('');
+    }
+
+    async function fetchLogs(page) {
+        const url = `${API_BASE}/admin-request-logs?${buildQuery(page).toString()}`;
+
+        el('btnSearch').disabled = true;
+        el('btnPrev').disabled = true;
+        el('btnNext').disabled = true;
+
+        log(`请求: GET ${url}`);
+        try {
+            const res = await fetch(url, { method: 'GET' });
+            const data = await res.json();
+
+            const list = data?.data ?? [];
+            const total = Number(data?.total ?? 0);
+
+            currentPage = page;
+            lastTotal = total;
+
+            pageEl.textContent = String(currentPage);
+            totalEl.textContent = String(lastTotal);
+
+            renderRows(list);
+            log(`完成: ${list.length} 条 / 总计 ${total} 条`);
+        } catch (e) {
+            log(`请求出错: ${e.message}`);
+            tbody.innerHTML = `<tr><td colspan="10" class="muted">请求失败：${escapeHtml(e.message)}</td></tr>`;
+        } finally {
+            el('btnSearch').disabled = false;
+            el('btnPrev').disabled = false;
+            el('btnNext').disabled = false;
+        }
+    }
+
+    function resetFilters() {
+        el('adminEmail').value = '';
+        el('method').value = '';
+        el('path').value = '';
+        el('startAt').value = '';
+        el('endAt').value = '';
+        el('pageSize').value = '20';
+    }
+
+    el('btnSearch').addEventListener('click', () => fetchLogs(1));
+    el('btnReset').addEventListener('click', () => {
+        resetFilters();
+        log('已重置筛选条件');
+    });
+
+    el('btnPrev').addEventListener('click', () => {
+        if (currentPage <= 1) return;
+        fetchLogs(currentPage - 1);
+    });
+
+    el('btnNext').addEventListener('click', () => {
+        const pageSize = Number(el('pageSize').value || 20);
+        const maxPage = Math.max(1, Math.ceil(lastTotal / pageSize));
+        if (currentPage >= maxPage) return;
+        fetchLogs(currentPage + 1);
+    });
+
+    log('就绪');
+</script>
+</body>
+</html>
+
