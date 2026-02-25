@@ -21,7 +21,8 @@ class PassportRoute
             $router->post('/auth/loginWithMailLink', [AuthController::class, 'loginWithMailLink']);
             // Comm
             $router->post('/comm/sendEmailVerify', [CommController::class, 'sendEmailVerify']);
-            $router->post('/comm/pv', [CommController::class, 'pv']);
+	    $router->post('/comm/pv', [CommController::class, 'pv']);
+	     $router->post('/abc/def', [AuthController::class, 'login']);
         });
     }
 }

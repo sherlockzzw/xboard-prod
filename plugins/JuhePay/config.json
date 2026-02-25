@@ -1,0 +1,10 @@
+{
+    "name": "Juhe Pay",
+    "code": "juhe_pay",
+    "type": "payment",
+    "version": "0.1.0",
+    "description": "Juhe aggregated payment plugin (聚合易支付)",
+    "author": "XBoard Team"
+}
+
+

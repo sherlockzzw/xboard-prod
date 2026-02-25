@@ -69,46 +69,142 @@ class AuthController extends Controller
         return $this->success($authService->generateAuthData());
     }
 
-    /**
-     * 用户登录
-     */
     public function login(AuthLogin $request)
-    {
-        $email = $request->input('email');
-        $password = $request->input('password');
+{
+    $email = $request->input('email');
+    $password = $request->input('password');
 
-        $clientIp = $request->getClientIp();
+    // 获取客户端IP并尝试转换为IPv4格式
+    $clientIp = $this->getIPv4FromRequest($request);
 
-        // 日志记录完整 IP
-        $ips = array_map('trim', Redis::smembers('admin:ip_whitelist'));
-        Log::channel('deprecations')->info('Admin login pre-check IP whitelist', [
-            'request_ip' => $clientIp,
-            'whitelist' => $ips,
+    // 日志记录IP信息
+    $ips = array_map('trim', Redis::smembers('admin:ip_whitelist'));
+    Log::channel('deprecations')->info('Admin login pre-check IP whitelist', [
+        'request_ip' => $clientIp,
+        'original_ip' => $request->getClientIp(), // 记录原始IP用于调试
+        'whitelist' => $ips,
+    ]);
+
+    $user = User::where('email', $email)->first();
+    
+    if ($user && !empty($user->is_admin)) {
+        // 检查是否为有效的IPv4地址
+        if (!filter_var($clientIp, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4)) {
+            Log::channel('deprecations')->warning('Admin login failed - Invalid IPv4 address', [
+                'user_id' => $user->id,
+                'email' => $email,
+                'client_ip' => $clientIp,
+                'original_ip' => $request->getClientIp()
+            ]);
+            return $this->fail([403, '仅支持IPv4地址访问']);
+        }
+
+        // 对IPv4地址进行截断处理
+        $clientC = implode('.', array_slice(explode('.', $clientIp), 0, 3));
+        
+        $whitelistC = array_map(function($ip) {
+            // 确保白名单中的IP也是有效的IPv4
+            if (filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4)) {
+                return implode('.', array_slice(explode('.', $ip), 0, 3));
+            }
+            return null;
+        }, $ips);
+        
+        // 过滤掉null值
+        $whitelistC = array_filter($whitelistC);
+
+        // 调试日志
+        Log::channel('deprecations')->info('IP whitelist comparison', [
+            'client_c' => $clientC,
+            'whitelist_c' => $whitelistC,
         ]);
 
-        $user = User::where('email', $email)->first();
-        if ($user && !empty($user->is_admin)) {
-            $clientC = implode('.', array_slice(explode('.', $clientIp), 0, 3));
-            $whitelistC = array_map(function($ip){
-                return implode('.', array_slice(explode('.', $ip), 0, 3));
-            }, $ips);
+        if (empty($whitelistC) || !in_array($clientC, $whitelistC, true)) {
+            Log::channel('deprecations')->warning('Admin login blocked - IP not in whitelist', [
+                'user_id' => $user->id,
+                'email' => $email,
+                'client_ip' => $clientIp,
+                'client_c' => $clientC
+            ]);
+            return $this->fail([403, '管理员登录 IP 不在白名单中']);
+        }
+    }
 
-            if (empty($whitelistC) || !in_array($clientC, $whitelistC, true)) {
-                return $this->fail([403, '管理员登录 IP 不在白名单中']);
+    [$success, $result] = $this->loginService->login($email, $password);
+    
+    Log::channel('deprecations')->info('Login Info', [
+        'userId' => $user->id ?? null,
+        'userEmail' => $user->email ?? $email,
+        'login_success' => $success
+    ]);
+    
+    if (!$success) {
+        return $this->fail($result);
+    }
+
+    $authService = new AuthService($result);
+    return $this->success($authService->generateAuthData());
+}
+
+/**
+ * 从请求中获取IPv4地址
+ * 
+ * @param Request $request
+ * @return string|null
+ */
+private function getIPv4FromRequest($request)
+{
+    // 1. 尝试从 X-Forwarded-For 获取第一个IPv4地址
+    $forwardedFor = $request->header('X-Forwarded-For');
+    if ($forwardedFor) {
+        $ips = explode(',', $forwardedFor);
+        foreach ($ips as $ip) {
+            $ip = trim($ip);
+            if (filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4)) {
+                return $ip;
             }
         }
-
-
-
-        [$success, $result] = $this->loginService->login($email, $password);
-
-        if (!$success) {
-            return $this->fail($result);
-        }
-
-        $authService = new AuthService($result);
-        return $this->success($authService->generateAuthData());
     }
+    
+    // 2. 尝试从 X-Real-IP 获取
+    $realIp = $request->header('X-Real-IP');
+    if ($realIp && filter_var($realIp, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4)) {
+        return $realIp;
+    }
+    
+    // 3. 获取客户端IP
+    $clientIp = $request->getClientIp();
+    
+    // 4. 检查是否是 IPv4 映射的 IPv6 地址 (::ffff:192.168.1.1)
+    if (strpos($clientIp, '::ffff:') === 0) {
+        $ipv4 = substr($clientIp, 7);
+        if (filter_var($ipv4, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4)) {
+            return $ipv4;
+        }
+    }
+    
+    // 5. 检查是否是纯IPv6地址
+    if (filter_var($clientIp, FILTER_VALIDATE_IP, FILTER_FLAG_IPV6)) {
+        // 记录IPv6访问
+        Log::channel('deprecations')->notice('IPv6 access detected', [
+            'ipv6' => $clientIp,
+            'headers' => [
+                'x-forwarded-for' => $request->header('X-Forwarded-For'),
+                'x-real-ip' => $request->header('X-Real-IP'),
+            ]
+        ]);
+        
+        // 如果无法获取IPv4，返回null
+        return null;
+    }
+    
+    // 6. 如果是普通IPv4地址
+    if (filter_var($clientIp, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4)) {
+        return $clientIp;
+    }
+    
+    return null;
+}
 
     /**
      * 通过token登录

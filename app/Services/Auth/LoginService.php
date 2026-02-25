@@ -68,7 +68,8 @@ class LoginService
         }
 
         // 更新最后登录时间
-        $user->last_login_at = time();
+	$user->last_login_at = time();
+        $user->last_login_ip = request()->getClientIp();
         $user->save();
 
         HookManager::call('user.login.after', $user);

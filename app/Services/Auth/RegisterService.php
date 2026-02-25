@@ -13,6 +13,7 @@ use App\Utils\Dict;
 use App\Utils\Helper;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Log;
 
 class RegisterService
 {
@@ -28,6 +29,10 @@ class RegisterService
         if ((int) admin_setting('register_limit_by_ip_enable', 0)) {
             $registerCountByIP = Cache::get(CacheKey::get('REGISTER_IP_RATE_LIMIT', $request->ip())) ?? 0;
             if ((int) $registerCountByIP >= (int) admin_setting('register_limit_count', 3)) {
+                Log::channel('daily')->info('ipipip', [
+                    'ip' => $request->ip(),
+                    'registerCountByIP' => $registerCountByIP,
+                ]);
                 return [
                     false,
                     [
@@ -191,3 +196,4 @@ class RegisterService
         return [true, $user];
     }
 }
+

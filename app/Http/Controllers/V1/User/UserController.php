@@ -18,6 +18,7 @@ use App\Utils\CacheKey;
 use App\Utils\Helper;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Log;
 
 class UserController extends Controller
 {
@@ -171,7 +172,17 @@ class UserController extends Controller
         $user->token = Helper::guid();
         if (!$user->save()) {
             return $this->fail([400, __('Reset failed')]);
-        }
+	}
+        Log::channel('daily')->info('reset SubscribeUrl', [
+            'source' => 'user.resetSecurity',
+            'user_id' => $user->id,
+            'email' => $user->email,
+	]);
+	 \App\Models\Log::create([
+            'title'=>'resetSecurity',
+            'uri'=>$user->id,
+            'method'=>'POST'
+        ]);
         return $this->success(Helper::getSubscribeUrl($user->token));
     }
 
