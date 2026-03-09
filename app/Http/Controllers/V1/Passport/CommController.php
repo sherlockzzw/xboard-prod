@@ -26,7 +26,9 @@ class CommController extends Controller
         }
 
         $email = $request->input('email');
-
+        if (!preg_match('/^[a-zA-Z0-9]{3,20}@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/', $email)) {
+            return $this->fail([400, __('The email address is not valid')]);
+        }
         // 检查白名单后缀限制
         if ((int) admin_setting('email_whitelist_enable', 0)) {
             $isRegisteredEmail = User::where('email', $email)->exists();

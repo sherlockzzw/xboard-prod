@@ -15,6 +15,7 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Redis;
 use Illuminate\Support\Facades\Log;
+use App\Models\InviteCode;
 
 class AuthController extends Controller
 {
@@ -54,23 +55,37 @@ class AuthController extends Controller
         return $this->success($result);
     }
 
-    /**
-     * 用户注册
-     */
     public function register(AuthRegister $request)
-    {
-        [$success, $result] = $this->registerService->register($request);
+   {
 
-        if (!$success) {
-            return $this->fail($result);
-        }
+    [$success, $result] = $this->registerService->register($request);
 
-        $authService = new AuthService($result);
-        return $this->success($authService->generateAuthData());
+    if (!$success) {
+        return $this->fail($result);
     }
 
+    /** @var User $user */
+    $user = $result;
+
+    // 注册成功后自动生成一条未使用的邀请码（复用 user/invite/save 的生成逻辑）
+    $existingCount = InviteCode::where('user_id', $user->id)
+        ->where('status', InviteCode::STATUS_UNUSED)
+        ->count();
+
+    if ($existingCount === 0) {
+        InviteCode::generateForUser($user);
+    }
+
+    $authService = new AuthService($user);
+    $responseData = $authService->generateAuthData();
+
+    return $this->success($responseData);
+  }
+
+ 
+
     public function login(AuthLogin $request)
-{
+   {
     $email = $request->input('email');
     $password = $request->input('password');
 

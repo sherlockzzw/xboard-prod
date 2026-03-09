@@ -30,6 +30,10 @@ class UpdateAliveDataJob implements ShouldQueue
 
   public function handle(): void
   {
+        Log::channel('daily')->info('UpdateAliveDataJob start', [
+      'node' => $this->nodeType . '#' . $this->nodeId,
+      'uids' => array_keys($this->data),
+  ]);	  
     try {
       $updateAt = time();
       $nowTs = time();

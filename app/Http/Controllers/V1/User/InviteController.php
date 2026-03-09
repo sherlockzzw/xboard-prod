@@ -20,10 +20,10 @@ class InviteController extends Controller
         if (InviteCode::where('user_id', $request->user()->id)->where('status', 0)->count() >= admin_setting('invite_gen_limit', 5)) {
             return $this->fail([400,__('The maximum number of creations has been reached')]);
         }
-        $inviteCode = new InviteCode();
-        $inviteCode->user_id = $request->user()->id;
-        $inviteCode->code = Helper::randomChar(8);
-        return $this->success($inviteCode->save());
+
+        $inviteCode = InviteCode::generateForUser($request->user());
+
+        return $this->success((bool) $inviteCode);
     }
 
     public function details(Request $request)
@@ -77,3 +77,4 @@ class InviteController extends Controller
         return $this->success($data);
     }
 }
+
