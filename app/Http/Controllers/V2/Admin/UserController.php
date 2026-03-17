@@ -113,14 +113,14 @@ class UserController extends Controller
         // 转换数字字符串为适当的类型
         if (is_numeric($filterValue)) {
             $filterValue = strpos($filterValue, '.') !== false
-                ? (float) $filterValue
-                : (int) $filterValue;
+                ? (float)$filterValue
+                : (int)$filterValue;
         }
 
         // 处理计算字段
         $queryField = match ($field) {
             'total_used' => DB::raw('(u + d)'),
-            default => $field
+            default      => $field
         };
 
         $this->applyQueryCondition($query, $queryField, $operator, $filterValue);
@@ -186,7 +186,7 @@ class UserController extends Controller
         $user['balance'] = $user['balance'] / 100;
         $user['commission_balance'] = $user['commission_balance'] / 100;
         $user['subscribe_url'] = Helper::getSubscribeUrl($user['token']);
-        $user['online_count'] = isset($user['online_count']) ? (int) $user['online_count'] : 0;
+        $user['online_count'] = isset($user['online_count']) ? (int)$user['online_count'] : 0;
         $user['last_online_at'] = $user['last_online_at'] ?? null;
         return $user;
     }
@@ -207,8 +207,8 @@ class UserController extends Controller
         $params = $request->validated();
 
         // 检查配置的用户是否尝试修改 is_admin 字段
-        $restrictedIds = array_filter(array_map('intval', explode(',', (string) env('CUSTOMER_IDS', ''))));
-        if (!empty($restrictedIds) && in_array((int) $request->user()->id, $restrictedIds, true)) {
+        $restrictedIds = array_filter(array_map('intval', explode(',', (string)env('CUSTOMER_IDS', ''))));
+        if (!empty($restrictedIds) && in_array((int)$request->user()->id, $restrictedIds, true)) {
             // 如果请求中包含 is_admin 字段（无论是 true 还是 false），都不允许修改
             if (isset($params['is_admin'])) {
                 // 返回权限不足的错误，使用200状态码避免前端清除token
@@ -242,13 +242,26 @@ class UserController extends Controller
             $params['group_id'] = $plan->group_id;
         }
         // 处理邀请用户
-        if ($request->input('invite_user_email') && $inviteUser = User::where('email', $request->input('invite_user_email'))->first()) {
-            $params['invite_user_id'] = $inviteUser->id;
-        } else {
-            $params['invite_user_id'] = null;
+        # if ($request->input('invite_user_email') && $inviteUser = User::where('email', $request->input('invite_user_email'))->first()) {
+        #     $params['invite_user_id'] = $inviteUser->id;
+        # } else {
+        #     $params['invite_user_id'] = null;
+        # }
+        if ($request->has('invite_user_email')) {
+            $inviteUserEmail = (string)$request->input('invite_user_email');
+            if ($inviteUserEmail !== '') {
+                $inviteUser = User::where('email', $inviteUserEmail)->first();
+                if (!$inviteUser) {
+                    return $this->fail([400202, '邀请人邮箱不存在']);
+                }
+                $params['invite_user_id'] = $inviteUser->id;
+            } else {
+                // 传空字符串表示清空邀请人
+                $params['invite_user_id'] = null;
+            }
         }
 
-        if (isset($params['banned']) && (int) $params['banned'] === 1) {
+        if (isset($params['banned']) && (int)$params['banned'] === 1) {
             $authService = new AuthService($user);
             $authService->removeAllSessions();
         }
@@ -335,7 +348,7 @@ class UserController extends Controller
                     } catch (\Exception $e) {
                         Log::error('CSV导出错误: ' . $e->getMessage(), [
                             'user_id' => $user->id,
-                            'email' => $user->email
+                            'email'   => $user->email
                         ]);
                         continue; // 继续处理下一条记录
                     }
@@ -347,7 +360,7 @@ class UserController extends Controller
 
             fclose($output);
         }, $filename, [
-            'Content-Type' => 'text/csv; charset=UTF-8',
+            'Content-Type'        => 'text/csv; charset=UTF-8',
             'Content-Disposition' => 'attachment; filename="' . $filename . '"'
         ]);
     }
@@ -363,9 +376,9 @@ class UserController extends Controller
 
             $userService = app(UserService::class);
             $user = $userService->createUser([
-                'email' => $email,
-                'password' => $request->input('password') ?? $email,
-                'plan_id' => $request->input('plan_id'),
+                'email'      => $email,
+                'password'   => $request->input('password') ?? $email,
+                'plan_id'    => $request->input('plan_id'),
                 'expired_at' => $request->input('expired_at'),
             ]);
 
@@ -388,13 +401,12 @@ class UserController extends Controller
         for ($i = 0; $i < $request->input('generate_count'); $i++) {
             $email = Helper::randomChar(6) . '@' . $request->input('email_suffix');
             $usersData[] = [
-                'email' => $email,
-                'password' => $request->input('password') ?? $email,
-                'plan_id' => $request->input('plan_id'),
+                'email'      => $email,
+                'password'   => $request->input('password') ?? $email,
+                'plan_id'    => $request->input('plan_id'),
                 'expired_at' => $request->input('expired_at'),
             ];
         }
-
 
 
         try {
@@ -414,7 +426,7 @@ class UserController extends Controller
         // 判断是否导出 CSV
         if ($request->input('download_csv')) {
             $headers = [
-                'Content-Type' => 'text/csv',
+                'Content-Type'        => 'text/csv',
                 'Content-Disposition' => 'attachment; filename="users.csv"',
             ];
             $callback = function () use ($users, $request) {
@@ -436,18 +448,18 @@ class UserController extends Controller
         // 默认返回 JSON
         $data = collect($users)->map(function ($user) use ($request) {
             return [
-                'email' => $user['email'],
-                'password' => $request->input('password') ?? $user['email'],
-                'expired_at' => $user['expired_at'] === NULL ? '长期有效' : date('Y-m-d H:i:s', $user['expired_at']),
-                'uuid' => $user['uuid'],
-                'created_at' => date('Y-m-d H:i:s', $user['created_at']),
+                'email'         => $user['email'],
+                'password'      => $request->input('password') ?? $user['email'],
+                'expired_at'    => $user['expired_at'] === NULL ? '长期有效' : date('Y-m-d H:i:s', $user['expired_at']),
+                'uuid'          => $user['uuid'],
+                'created_at'    => date('Y-m-d H:i:s', $user['created_at']),
                 'subscribe_url' => Helper::getSubscribeUrl($user['token']),
             ];
         });
         return response()->json([
-            'code' => 0,
+            'code'    => 0,
             'message' => '批量生成成功',
-            'data' => $data,
+            'data'    => $data,
         ]);
     }
 
@@ -462,8 +474,8 @@ class UserController extends Controller
         $subject = $request->input('subject');
         $content = $request->input('content');
         $templateValue = [
-            'name' => admin_setting('app_name', 'XBoard'),
-            'url' => admin_setting('app_url'),
+            'name'    => admin_setting('app_name', 'XBoard'),
+            'url'     => admin_setting('app_url'),
             'content' => $content
         ];
 
@@ -472,9 +484,9 @@ class UserController extends Controller
         $builder->chunk($chunkSize, function ($users) use ($subject, $templateValue, &$totalProcessed) {
             foreach ($users as $user) {
                 dispatch(new SendEmailJob([
-                    'email' => $user->email,
-                    'subject' => $subject,
-                    'template_name' => 'notify',
+                    'email'          => $user->email,
+                    'subject'        => $subject,
+                    'template_name'  => 'notify',
                     'template_value' => $templateValue
                 ], 'send_email_mass'));
             }
@@ -513,7 +525,7 @@ class UserController extends Controller
             'id' => 'required|exists:App\Models\User,id'
         ], [
             'id.required' => '用户ID不能为空',
-            'id.exists' => '用户不存在'
+            'id.exists'   => '用户不存在'
         ]);
         $user = User::find($request->input('id'));
         try {

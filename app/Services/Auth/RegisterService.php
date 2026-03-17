@@ -12,6 +12,7 @@ use App\Utils\CacheKey;
 use App\Utils\Dict;
 use App\Utils\Helper;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 
@@ -171,7 +172,28 @@ class RegisterService
         if (!$user->save()) {
             return [false, [500, __('Register failed')]];
         }
+        if ($inviteUserId) {
+            DB::transaction(function () use ($inviteUserId) {
+                /** @var User|null $inviter */
+                $inviter = User::lockForUpdate()->find($inviteUserId);
+                if (!$inviter) {
+                    return;
+                }
 
+                // 流量包用户：expired_at === NULL（一次性/按流量）
+                if ($inviter->expired_at === null) {
+                    $inviter->transfer_enable = (int) ($inviter->transfer_enable ?? 0) + 1073741824; // +1GB
+                    $inviter->save();
+                    return;
+                }
+
+                // 时长用户：expired_at 为时间戳（若已过期，从当前时间开始 +1 天）
+                $base = (int) $inviter->expired_at;
+                $now = time();
+                $inviter->expired_at = ($base > $now ? $base : $now) + 86400;
+                $inviter->save();
+            });
+        }
         HookManager::call('user.register.after', $user);
 
         // 清除邮箱验证码
