@@ -77,6 +77,42 @@ class RouteServiceProvider extends ServiceProvider
             }
         });
 
+        Route::group([
+            'prefix' => '/index/list',
+            'middleware' => 'api',
+            'namespace' => $this->namespace
+        ], function ($router) {
+            // 映射标准路由
+            $this->app->make('App\\Http\\Routes\\V1IndexList\\IndexListRoute')->map($router);
+
+            // alias 映射
+            $router->any('/{alias}', function ($alias) {
+                $map = config('route_map'); // alias => Controller@method
+
+                if (!isset($map[$alias])) {
+                    abort(404, 'Alias not found');
+                }
+
+                $target = $map[$alias];
+
+                if (!str_contains($target, '@')) {
+                    abort(500, 'Invalid target mapping for alias');
+                }
+
+                [$controller, $method] = explode('@', $target);
+
+                // 实例化控制器
+                $instance = app()->make($controller);
+
+                // 调用方法，Laravel 自动注入 Request、路由参数等
+                return app()->call([$instance, $method]);
+            });
+        });
+
+
+
+
+
 
         Route::group([
             'prefix' => '/api/v2',
@@ -89,3 +125,4 @@ class RouteServiceProvider extends ServiceProvider
         });
     }
 }
+

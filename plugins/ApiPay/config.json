@@ -1,0 +1,9 @@
+{
+    "name": "API Pay",
+    "code": "api_pay",
+    "type": "payment",
+    "version": "1.0.0",
+    "description": "API支付插件（Pay_Index.html + MD5签名）",
+    "author": "XBoard Team"
+}
+

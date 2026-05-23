@@ -326,13 +326,15 @@ class ClashMeta extends AbstractProtocol
                 break;
         }
 
-        switch (data_get($protocol_settings, 'network')) {
+        switch (strtolower((string) data_get($protocol_settings, 'network', ''))) {
             case 'ws':
                 $array['network'] = 'ws';
-                if ($path = data_get($protocol_settings, 'network_settings.path'))
-                    $array['ws-opts']['path'] = $path;
-                if ($host = data_get($protocol_settings, 'network_settings.headers.Host'))
-                    $array['ws-opts']['headers'] = ['Host' => $host];
+                $array['ws-opts'] = ['path' => '/'];
+                if ($wsHost = data_get($protocol_settings, 'network_settings.headers.Host')
+                    ?: data_get($protocol_settings, 'tls_settings.server_name')
+                    ?: ($server['host'] ?? null)) {
+                    $array['ws-opts']['headers'] = ['Host' => $wsHost];
+                }
                 break;
             case 'grpc':
                 $array['network'] = 'grpc';
@@ -567,3 +569,4 @@ class ClashMeta extends AbstractProtocol
         }
     }
 }
+
